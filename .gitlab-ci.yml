@@ -1,0 +1,45 @@
+---
+# Pipeline template
+# Includes several jobs
+include:
+  - project: tooling/ci-templates
+    ref: main
+    file:
+      - detect-secrets.gitlab-ci.yml
+      - hadolint.gitlab-ci.yml
+      - docker_build.gitlab-ci.yml
+      - docker_push.gitlab-ci.yml
+      - dive.gitlab-ci.yml
+      - dockle.gitlab-ci.yml
+      - dependency-check.gitlab-ci.yml
+      - test.gitlab-ci.yml
+
+variables:
+  IMAGE_NAMESPACE: gofwd
+  IMAGE_REPOSITORY: ${IMAGE_NAMESPACE}/analyze_hosts
+  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}
+  IMAGE_TAR: ${IMAGE_TAG}.tgz
+  # Don't mind the container being run as root
+  DOCKLE_PARMS: "--ignore CIS-DI-0001"
+
+stages:
+  # security checks that don't need build
+  - sast
+  # build the image
+  - build
+  # security checks after build
+  - security_testing
+  # test build
+  - test
+  # push build
+  - push
+
+.sast:
+  stage: sast
+
+.security_testing:
+  stage: security_testing
+  needs:
+    - build
+  variables:
+    GIT_STRATEGY: none

@@ -1,0 +1,5 @@
+\#*#
+*.py[cod]
+\.*
+analyze_hosts.output
+doc8.ini
