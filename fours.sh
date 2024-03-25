@@ -3,8 +3,6 @@
 # Fours - Snap Shot Security Scanner
 # Perform a security scan given a set of parameters, and report in HTML
 
-# Copyright (C) 2023, Peter Mosmans
-# SPDX-License-Identifier: GPL-3.0-only
 
 IMAGE=gofwd/analyze_hosts
 TIMEZONE=Europe/Amsterdam
