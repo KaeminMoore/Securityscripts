@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 
 # analyze_hosts - Scans one or more hosts on security vulnerabilities
-#
-# Copyright (C) 2012-2014 Peter Mosmans
-#                         <support AT go-forward.net>
-#
-# This source code (shell script) is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # TODO: - add: option to only list commands, don't execute them
 #       - add: make logging of output default
