@@ -1,7 +1,5 @@
 # Generic Makefile for Docker images
 
-# Copyright (C) 2018-2022 Peter Mosmans [Go Forward]
-# SPDX-License-Identifier: GPL-3.0-or-later
 
 # TAG	!= git tag|tail -1
 TAG     = "latest"
