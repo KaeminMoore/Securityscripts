@@ -2,11 +2,7 @@
 
 """results_to_html - Convert JSON results to a simple HTML file
 
-Copyright (C) 2023 Peter Mosmans [Go Forward]
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+
 """
 
 import ipaddress
