@@ -1,0 +1,4 @@
+sudo bash -lc 'out=$(find / -xdev \( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp -o -path /var/tmp -o -path "/run/user/*" -o -path /snap \) -prune -o -type f -perm -0002 -printf "%p %M %U:%G\n" 2>/dev/null); if [ -z "$out" ]; then echo "PASS: no world-writable files found"; else echo "FAIL: world-writable files:"; printf "%s\n" "$out"; fi'
+
+
+sudo bash -lc 'out=$(find / -xdev \( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp -o -path /var/tmp -o -path "/run/user/*" -o -path /snap \) -prune -o -type d -perm -0002 ! -perm -1000 -printf "%p %M %U:%G\n" 2>/dev/null); if [ -z "$out" ]; then echo "PASS: all world-writable directories have sticky bit"; else echo "FAIL: world-writable directories without sticky bit:"; printf "%s\n" "$out"; fi'
