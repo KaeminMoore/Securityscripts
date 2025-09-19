@@ -1,0 +1,1 @@
+sudo grep -RInP "(?i)(?=.*\bp\b)(?=.*\bi\b)(?=.*\bn\b)(?=.*\bu\b)(?=.*\bg\b)(?=.*\bs\b)(?=.*\bb\b)(?=.*\bacl\b)(?=.*\bxattrs\b)(?=.*\bsha512\b).*\b(/usr)?/sbin/(auditctl|auditd|ausearch|aureport|autrace|augenrules)\b" /etc/aide.conf /etc/aide.d/* 2>/dev/null || echo "No matching AIDE line with all required options found"
