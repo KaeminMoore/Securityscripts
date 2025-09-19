@@ -1,0 +1,28 @@
+modules=(afs ceph cifs exfat ext fat fscache fuse gfs2 nfs_common nfsd smbfs_common)
+
+# gather mounted filesystem types and modprobe config once
+mounted_fs=$(findmnt -n -o FSTYPE | sort -u)
+modconf=$(modprobe --showconfig 2>/dev/null)
+
+printf "%-14s %-6s %-6s %-8s %s\n" "MODULE" "AVAIL" "LOADED" "MOUNTED" "DISABLED? (modprobe)"
+for m in "${modules[@]}"; do
+  # avail: modinfo returns 0 if the module is present in /lib/modules
+  if modinfo -F filename "$m" >/dev/null 2>&1; then avail="yes"; else avail="no"; fi
+
+  # loaded?
+  if lsmod | awk '{print $1}' | grep -wq "^${m}$"; then loaded="yes"; else loaded="no"; fi
+
+  # mounted? best-effort: check if a mounted fstype exactly matches the module name (works for cifs, fuse, exfat, gfs2, ceph, nfs, etc.)
+  if printf "%s\n" "$mounted_fs" | grep -wq "^${m}$" || \
+     ( [ "$m" = "nfs_common" ] && printf "%s\n" "$mounted_fs" | grep -Eq '^nfs|nfs4$' ) || \
+     ( [ "$m" = "nfsd" ] && printf "%s\n" "$mounted_fs" | grep -Eq '^nfsd|nfs' ); then
+    mounted="yes"
+  else
+    mounted="no"
+  fi
+
+  # disabled in modprobe? check for blacklist or install <module> /bin/false or /bin/true semantics
+  if printf "%s\n" "$modconf" | grep -E -q "^\s*(blacklist|install)\s+${m}\b"; then disabled="yes"; else disabled="no"; fi
+
+  printf "%-14s %-6s %-6s %-8s %s\n" "$m" "$avail" "$loaded" "$mounted" "$disabled"
+done
