@@ -1,1 +1,22 @@
+sudo ls -ld --color=never /var/log/{lastlog,README,wtmp,btmp,secure,auth.log,syslog,messages} /var/log/*.journal /var/log/.*journal~ 2>/dev/null || true
+
+
 sudo find /var/log -type f \( -perm /g+w -o -perm /o+w \) -printf '%p %M %U:%G\n' 2>/dev/null | sort
+
+
+sudo find /var/log -type f -printf '%p %M %U:%G\n' 2>/dev/null | \
+  awk '$3 !~ /^(root|syslog|systemd-journal|sssd|gdm|gdm3|adm)$/' | sort
+
+
+sudo find /var/log -maxdepth 1 -type f -regextype posix-extended \
+  -regex '/var/log/(lastlog(|\..*)|wtmp(|\..*)|wtmp-.*|btmp(|\..*)|btmp-.*|README)' \
+  -printf '%p %M %U:%G\n' 2>/dev/null | sort
+
+
+sudo find /var/log -type f \( -name 'secure' -o -name 'auth.log' -o -name 'syslog' -o -name 'messages' -o -name '*.journal' -o -name '.*journal~' \) \
+  -printf '%p %M %U:%G\n' 2>/dev/null | sort
+
+
+UIDMIN=$(awk '/^UID_MIN/ {print $2; exit}' /etc/login.defs); \
+sudo find /var/log -type f \( -perm /o+w -o -perm /g+w -o ! -user root -a ! -user syslog -a ! -user systemd-journal -a ! -user sssd \) -printf '%p %M %U:%G %u\n' 2>/dev/null | \
+  awk -v uidmin="$UIDMIN" '{ if ($NF+0 < uidmin) print $0; }' | sort
