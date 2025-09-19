@@ -1,0 +1,27 @@
+sudo -Hiu root env | awk -F= '/^PATH=/ {print "root PATH="$2}'
+
+#quick cheks for empty element, trailing colon, or . in PATH
+
+ROOTPATH="$(sudo -Hiu root env | awk -F= '/^PATH=/ {print $2}')"
+[[ "$ROOTPATH" == *"::"* ]] && echo "ISSUE: contains empty path element (::)"
+[[ "$ROOTPATH" == *: ]]      && echo "ISSUE: contains trailing colon (:)"
+[[ "$ROOTPATH" =~ (^|:)\.(:|$) ]] && echo "ISSUE: contains current-directory (.)"
+
+#Full per-path audit (existence, owner, mode) — single compact loop
+
+ROOTPATH="$(sudo -Hiu root env | awk -F= '/^PATH=/ {print $2}')"
+IFS=':' read -ra PATHS <<< "$ROOTPATH"
+for p in "${PATHS[@]}"; do
+  [ -z "$p" ] && echo "EMPTY_PATH_ELEMENT" && continue
+  if [ ! -d "$p" ]; then
+    echo "NOT_DIR: $p"
+    continue
+  fi
+  owner=$(stat -c '%U' "$p" 2>/dev/null || echo "stat-failed")
+  mode=$(stat -c '%a' "$p" 2>/dev/null || echo "stat-failed")
+  [ "$owner" != "root" ] && echo "BAD_OWNER: $p owner=$owner"
+  # test group/other write bits (mask 022). stat returns octal digits like 755, so use base-8 conversion
+  if (( (8#$mode) & (8#022) )); then
+    echo "BAD_MODE:  $p mode=$mode (group/other write bits set)"
+  fi
+done
