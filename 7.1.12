@@ -1,0 +1,11 @@
+# 1) define paths to exclude (proc, sys, dev, run, tmp, snap, run/user, var/tmp)
+EXPR='( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp -o -path /var/tmp -o -path "/run/user/*" -o -path /snap ) -prune -o'
+
+# 2) list unowned files/dirs (nouser)
+sudo find / -xdev $EXPR -nouser -print 2>/dev/null | tee /tmp/cis-7.1.12-nouser.txt
+
+# 3) list ungrouped files/dirs (nogroup) and show counts
+sudo find / -xdev $EXPR -nogroup -print 2>/dev/null | tee /tmp/cis-7.1.12-nogroup.txt
+printf "\nSummary: unowned=%s ungrouped=%s\n" \
+  "$(wc -l < /tmp/cis-7.1.12-nouser.txt 2>/dev/null || echo 0)" \
+  "$(wc -l < /tmp/cis-7.1.12-nogroup.txt 2>/dev/null || echo 0)"
