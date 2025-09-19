@@ -1,0 +1,26 @@
+UIDMIN=$(awk '/^UID_MIN/{print $2; exit}' /etc/login.defs); \
+awk -F: -v uidmin="$UIDMIN" 'NR==FNR{shells[$1]=1; next} $3>=uidmin && ($7 in shells){printf "%-20s %-30s %s\n",$1,$6,$7}' /etc/shells /etc/passwd | sort
+
+
+UIDMIN=$(awk '/^UID_MIN/{print $2; exit}' /etc/login.defs); \
+awk -F: -v uidmin="$UIDMIN" 'NR==FNR{shells[$1]=1; next} $3>=uidmin && ($7 in shells){print $1 ":" $6}' /etc/shells /etc/passwd | \
+while IFS=: read -r u h; do [ -d "$h" ] || echo "MISSING_HOME: $u -> $h"; done
+
+
+UIDMIN=$(awk '/^UID_MIN/{print $2; exit}' /etc/login.defs); \
+awk -F: -v uidmin="$UIDMIN" 'NR==FNR{shells[$1]=1; next} $3>=uidmin && ($7 in shells){print $1 ":" $6}' /etc/shells /etc/passwd | \
+while IFS=: read -r user home; do
+  if [ ! -d "$home" ]; then
+    echo "MISSING_HOME: $user -> $home"
+    continue
+  fi
+  owner=$(stat -Lc '%U' "$home")
+  mode=$(stat -Lc '%a' "$home")
+  # find returns non-zero/zero; /027 tests for any of group-write or other read/write/exec bits beyond 0750
+  if [ "$owner" != "$user" ]; then
+    echo "BAD_OWNER:  $user -> $home (owner=$owner)"
+  fi
+  if find "$home" -maxdepth 0 -perm /027 -print -quit >/dev/null 2>&1; then
+    echo "BAD_MODE:   $user -> $home (mode=$mode) — permissions too permissive (should be 0750 or more restrictive)"
+  fi
+done
