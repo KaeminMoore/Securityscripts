@@ -1,0 +1,1 @@
+sudo find /var/log -type f \( -perm /g+w -o -perm /o+w \) -printf '%p %M %U:%G\n' 2>/dev/null | sort
