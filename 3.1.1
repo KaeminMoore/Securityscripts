@@ -1,0 +1,7 @@
+cat /sys/module/ipv6/parameters/disable 2>/dev/null || echo "no /sys/module/ipv6/parameters/disable"
+
+sysctl net.ipv6.conf.all.disable_ipv6 net.ipv6.conf.default.disable_ipv6
+
+ip -6 addr show | sed -n '1,120p'
+# or just check presence:
+[ -s /proc/net/if_inet6 ] && echo "IPv6 interfaces present" || echo "no IPv6 interfaces found"
