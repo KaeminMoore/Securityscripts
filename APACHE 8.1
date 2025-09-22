@@ -1,0 +1,5 @@
+sudo grep -RIn --color=never -E '^\s*ServerTokens\b' /etc/httpd /etc/apache2 /usr/local/apache2 2>/dev/null || echo "No ServerTokens directive found in common Apache config locations"
+
+# add/ensure the directive (RHEL/Debian use appropriate path)
+echo 'ServerTokens Prod' | sudo tee /etc/httpd/conf.d/99-security-ServerTokens.conf
+sudo systemctl reload httpd   # or: sudo systemctl reload apache2
