@@ -1,0 +1,23 @@
+sudo grep -RIn -C2 --color=never -E '<LimitExcept\b|AllowMethods\b|TraceEnable\b|LoadModule.*allowmethods|^\s*Require\b|^\s*Order\b' /etc/httpd /etc/apache2 /usr/local/apache2 2>/dev/null || echo "No relevant directives found in common Apache paths"
+
+
+sudo sh -c 'apachectl -M 2>/dev/null || apache2ctl -M 2>/dev/null' | grep -Ei 'allowmethods|methods' || echo "mod_allowmethods not loaded (or apachectl unavailable)"
+
+curl -sI --max-time 5 http://127.0.0.1/ | grep -i '^Allow:' || echo "No Allow header; OPTIONS may be blocked or app-specific"
+
+
+for m in PUT DELETE TRACE; do code=$(curl -s -o /dev/null -w "%{http_code}" -X $m --max-time 5 http://127.0.0.1/); echo "$m => HTTP $code"; done
+
+
+sudo sh -c '
+cfg=$(grep -RIn --color=never -E "<LimitExcept\b|AllowMethods\b" /etc/httpd /etc/apache2 /usr/local/apache2 2>/dev/null || true)
+hdr=$(curl -sI --max-time 5 http://127.0.0.1/ 2>/dev/null | awk -F": " "/^Allow:/ {print \$2; exit}" || true)
+echo "CONFIG_SNIPPET: ${cfg:-<none>}"
+echo "ALLOW_HEADER: ${hdr:-<none>}"
+if printf "%s\n" "$cfg" | grep -Eiq "LimitExcept.*GET.*HEAD.*POST.*OPTIONS|AllowMethods.*GET.*POST.*OPTIONS"; then
+  echo "RESULT: Likely PASS (server config restricts methods)"
+elif [ -n "$hdr" ] && printf "%s\n" "$hdr" | grep -Eviq '(^|, )GET(,|$)|(^|, )HEAD(,|$)|(^|, )POST(,|$)|(^|, )OPTIONS(,|$)'; then
+  echo "RESULT: FAIL (Allow: header contains methods other than GET/HEAD/POST/OPTIONS)"
+else
+  echo "RESULT: UNDETERMINED — inspect config and runtime behavior"
+fi'
