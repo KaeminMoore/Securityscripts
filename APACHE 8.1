@@ -3,3 +3,20 @@ sudo grep -RIn --color=never -E '^\s*ServerTokens\b' /etc/httpd /etc/apache2 /us
 # add/ensure the directive (RHEL/Debian use appropriate path)
 echo 'ServerTokens Prod' | sudo tee /etc/httpd/conf.d/99-security-ServerTokens.conf
 sudo systemctl reload httpd   # or: sudo systemctl reload apache2
+
+curl -sI --max-time 5 http://127.0.0.1/ 2>/dev/null | awk -F': ' '/^Server:/ {print $2; exit}' || echo "No Server header (no HTTP server listening on localhost)"
+
+# prints PASS if config contains Prod/ProductOnly OR the Server header is just "Apache", otherwise prints FAIL and shows evidence
+sudo sh -c '
+cfg=$(grep -Rin --color=never -E "^\s*ServerTokens\b" /etc/httpd /etc/apache2 /usr/local/apache2 2>/dev/null || true)
+hdr=$(curl -sI --max-time 5 http://127.0.0.1/ 2>/dev/null | awk -F": " "/^Server:/ {print \$2; exit}" || true)
+echo "CONFIG_MATCH: ${cfg:-<none>}"
+echo "SERVER_HEADER: ${hdr:-<none>}"
+if printf "%s\n" "$cfg" | grep -Eiq "ServerTokens\s+(Prod|ProductOnly)"; then
+  echo "RESULT: PASS (ServerTokens configured)"
+elif [ -n "$hdr" ] && printf "%s\n" "$hdr" | grep -Eqx 'Apache'; then
+  echo "RESULT: PASS (runtime Server header shows only 'Apache')"
+else
+  echo "RESULT: FAIL (ServerTokens not set to Prod/ProductOnly and runtime header exposes extra info)"
+fi'
+
