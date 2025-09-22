@@ -1,0 +1,11 @@
+HOST=example.com; PORT=443
+for p in tls1_3 tls1_2 tls1_1 tls1 ssl3; do
+  if timeout 5 openssl s_client -connect $HOST:$PORT -servername $HOST -$p </dev/null 2>/dev/null | grep -q '^Protocol *:'; then
+    echo "$p: SUPPORTED"
+  else
+    echo "$p: NOT SUPPORTED"
+  fi
+done
+
+
+sudo grep -R --color=never -E 'SSLProtocol|SSLHonorCipherOrder|SSLCipherSuite' /etc/httpd /etc/apache2 2>/dev/null
