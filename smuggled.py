@@ -8,7 +8,7 @@
 import socket
 import ssl
 
-host = "uscand01.jdc.ao.dcn"
+host = "enter host here"
 port = 443
 
 # First request: main request + smuggled request
