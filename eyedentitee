@@ -1,0 +1,82 @@
+import requests
+import socket
+import sys
+import re
+
+from urllib.parse import urljoin
+
+# Basic info
+TARGET = sys.argv[1] if len(sys.argv) > 1 else "http://192.168.1.1"
+COMMON_PATHS = ["/", "/index.html", "/cgi-bin/", "/setup.cgi", "/config", "/debug", "/status", "/admin", "/gf"]
+PORTS = [22, 23, 80, 443, 8080, 8443]
+
+def get_headers(url):
+    try:
+        r = requests.get(url, timeout=5)
+        print(f"[+] URL: {url} => Status: {r.status_code}")
+        server = r.headers.get("Server", "")
+        if server:
+            print(f"[+] Server header: {server}")
+            if "GoAhead" in server:
+                print(f"[!] Likely GoAhead Web Server detected")
+        return r
+    except Exception as e:
+        print(f"[-] Failed to connect to {url}: {e}")
+        return None
+
+def check_paths(base_url):
+    print("\n[+] Checking common embedded paths:")
+    for path in COMMON_PATHS:
+        url = urljoin(base_url, path)
+        try:
+            r = requests.get(url, timeout=5)
+            if r.status_code not in [404, 403]:
+                print(f"    [+] {url} => {r.status_code}")
+        except:
+            pass
+
+def basic_port_scan(ip):
+    print("\n[+] Scanning common ports:")
+    for port in PORTS:
+        try:
+            sock = socket.socket()
+            sock.settimeout(1)
+            result = sock.connect_ex((ip, port))
+            if result == 0:
+                print(f"    [+] Port {port}/tcp is OPEN")
+            sock.close()
+        except Exception as e:
+            print(f"    [-] Error on port {port}: {e}")
+
+def get_ttl(ip):
+    print("\n[+] Attempting TTL-based OS fingerprint...")
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        sock.connect((ip, 80))
+        ttl = sock.getsockopt(socket.IPPROTO_IP, socket.IP_TTL)
+        print(f"    [+] TTL value: {ttl}")
+
+        if ttl <= 64:
+            print("    [*] Likely Linux/Unix-based system")
+        elif ttl <= 128:
+            print("    [*] Likely Windows-based system")
+        elif ttl <= 255:
+            print("    [*] Likely network device (e.g., Cisco)")
+    except Exception as e:
+        print(f"    [-] Could not determine TTL: {e}")
+    finally:
+        sock.close()
+
+def main():
+    print(f"\n[*] Starting enumeration for {TARGET}")
+    # Extract IP from URL
+    ip = TARGET.split("//")[-1].split("/")[0].split(":")[0]
+
+    get_headers(TARGET)
+    check_paths(TARGET)
+    basic_port_scan(ip)
+    get_ttl(ip)
+
+if __name__ == "__main__":
+    main()
