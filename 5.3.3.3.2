@@ -1,0 +1,1 @@
+sudo sh -c 'grep -Pq -- "^\s*enforce_for_root\b" /etc/security/pwhistory.conf 2>/dev/null && echo "PASS: enforce_for_root present" || echo "FAIL: enforce_for_root NOT found"'
