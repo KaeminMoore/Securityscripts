@@ -1,0 +1,4 @@
+UIDMIN=$(awk '/^UID_MIN/{print $2;exit}' /etc/login.defs); \
+bad=$(awk -F: -v m=$UIDMIN '$3<m && $1!="root" {print $1 ":" $7}' /etc/passwd | \
+while IFS=: read -r u s; do grep -qxF "$s" /etc/shells && printf "%s uses %s\n" "$u" "$s"; done); \
+[ -z "$bad" ] && echo "PASS: no system accounts have a valid login shell" || { echo "FAIL: system accounts with valid shells:"; printf "%s\n" "$bad"; }
