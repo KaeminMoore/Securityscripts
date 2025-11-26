@@ -1,22 +1,39 @@
-sudo ls -ld --color=never /var/log/{lastlog,README,wtmp,btmp,secure,auth.log,syslog,messages} /var/log/*.journal /var/log/.*journal~ 2>/dev/null || true
+sudo bash -lc '
+fail=0
+echo "Checking /var/log (top-level files) ...";
+for f in /var/log/* /var/log/.*; do
+  [ -f "$f" ] || continue
+  bn=$(basename "$f")
+  mode=$(stat -c "%a" "$f" 2>/dev/null || echo "000")
+  owner=$(stat -c "%U" "$f" 2>/dev/null || echo "?")
+  group=$(stat -c "%G" "$f" 2>/dev/null || echo "?")
 
+  case "$bn" in
+    lastlog | lastlog.* | wtmp | wtmp.* | wtmp-* | btmp | btmp.* | btmp-*)
+      max=0664; want_owners="root"; want_groups="root"; ;;
+    secure|auth.log|syslog|messages|*.journal|.*journal~)
+      max=0640; want_owners="root|syslog"; want_groups="root|adm|systemd-journal"; ;;
+    gdm|gdm3|SSSD|sssd)
+      max=0660; want_owners="root|sssd"; want_groups="root|sssd|gdm|gdm3"; ;;
+    *)
+      max=0640; want_owners="root|syslog"; want_groups="root|adm"; ;;
+  esac
 
-sudo find /var/log -type f \( -perm /g+w -o -perm /o+w \) -printf '%p %M %U:%G\n' 2>/dev/null | sort
+  # owner check
+  if ! printf "%s\n" "$want_owners" | grep -Eq "^(${owner//|/|})$"; then
+    echo "BAD_OWNER: $f owner=$owner expected one-of: ${want_owners//|/, }"; fail=1
+  fi
 
+  # group check
+  if ! printf "%s\n" "$want_groups" | grep -Eq "^(${group//|/|})$"; then
+    echo "BAD_GROUP: $f group=$group expected one-of: ${want_groups//|/, }"; fail=1
+  fi
 
-sudo find /var/log -type f -printf '%p %M %U:%G\n' 2>/dev/null | \
-  awk '$3 !~ /^(root|syslog|systemd-journal|sssd|gdm|gdm3|adm)$/' | sort
+  # mode check: ensure no bits outside max are set
+  if (( (8#$mode & ~(8#$max)) != 0 )); then
+    echo "BAD_MODE:  $f mode=$mode should be $max or more restrictive"; fail=1
+  fi
+done
 
-
-sudo find /var/log -maxdepth 1 -type f -regextype posix-extended \
-  -regex '/var/log/(lastlog(|\..*)|wtmp(|\..*)|wtmp-.*|btmp(|\..*)|btmp-.*|README)' \
-  -printf '%p %M %U:%G\n' 2>/dev/null | sort
-
-
-sudo find /var/log -type f \( -name 'secure' -o -name 'auth.log' -o -name 'syslog' -o -name 'messages' -o -name '*.journal' -o -name '.*journal~' \) \
-  -printf '%p %M %U:%G\n' 2>/dev/null | sort
-
-
-UIDMIN=$(awk '/^UID_MIN/ {print $2; exit}' /etc/login.defs); \
-sudo find /var/log -type f \( -perm /o+w -o -perm /g+w -o ! -user root -a ! -user syslog -a ! -user systemd-journal -a ! -user sssd \) -printf '%p %M %U:%G %u\n' 2>/dev/null | \
-  awk -v uidmin="$UIDMIN" '{ if ($NF+0 < uidmin) print $0; }' | sort
+if [ $fail -eq 0 ]; then echo "PASS: /var/log files meet checked criteria"; else echo "FAIL: see items above"; fi
+'
