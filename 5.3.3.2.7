@@ -1,0 +1,1 @@
+sudo sh -c 'grep -Piq "^\s*enforce_for_root\b" /etc/security/pwquality.conf /etc/security/pwquality.conf.d/*.conf 2>/dev/null && echo "PASS: enforce_for_root is enabled" || echo "FAIL: enforce_for_root NOT found (root not enforced)"'
